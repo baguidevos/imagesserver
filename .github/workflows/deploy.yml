@@ -80,6 +80,7 @@ jobs:
           server-dir: ./
           port: ${{ secrets.PORT || 21 }}
           protocol: ftp
+          log-level: verbose
           exclude: |
             **/.git/**
             **/node_modules/**
