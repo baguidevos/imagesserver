@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreImageRequest;
+use App\Models\Image;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -60,14 +61,17 @@ class ImageController extends Controller
         ], 201);
     }
 
-    public function show(Request $request, string $imageId): StreamedResponse
+    public function show(string $imageId): StreamedResponse
     {
-        $image = $request->user()->images()->findOrFail($imageId);
+        $image = Image::findOrFail($imageId);
 
         return Storage::disk($image->disk)->response(
             $image->path,
             $image->original_name,
-            ['Content-Type' => $image->mime_type],
+            [
+                'Content-Type' => $image->mime_type,
+                'Cache-Control' => 'public, max-age=31536000, immutable',
+            ],
         );
     }
 
