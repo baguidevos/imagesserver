@@ -115,13 +115,11 @@ jobs:
       #   if: contains(steps.changed-files.outputs.all_changed_files, 'database/migrations/')
       #   run: php artisan migrate
 
-      # 9. Vider le cache Laravel (optionnel)
-      - name: Clear Laravel cache
-        if: contains(steps.changed-files.outputs.all_changed_files, 'app/') || contains(steps.changed-files.outputs.all_changed_files, 'config/')
+      # 9. Purger le cache sur le serveur distant
+      - name: Clear remote Laravel cache
         run: |
-          php artisan config:cache
-          php artisan route:cache
-          php artisan view:cache
+          sleep 3
+          curl -s "https://imageserver.carics.org/clear_cache.php?key=paya_secret_clear_2026"
  
       # 10. Notification de succès
       - name: ✅ Success Notification
