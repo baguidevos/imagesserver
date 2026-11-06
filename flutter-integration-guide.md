@@ -109,6 +109,33 @@ class AuthService {
     return AuthResponse.error(response);
   }
 
+  /// Synchronisation transparente avec Firebase Auth.
+  /// Crée automatiquement l'utilisateur sur le serveur d'images s'il n'existe pas,
+  /// ou l'authentifie s'il existe déjà.
+  Future<AuthResponse> authenticateWithFirebase({
+    required String firebaseUid,
+    required String email,
+    String? name,
+  }) async {
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/v1/auth/firebase'),
+      headers: {..._headers, 'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'firebase_uid': firebaseUid,
+        'email': email,
+        if (name != null && name.isNotEmpty) 'name': name,
+      }),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      await _saveToken(data['token']);
+      return AuthResponse.success(data);
+    }
+
+    return AuthResponse.error(response);
+  }
+
   /// Déconnexion.
   Future<void> logout() async {
     await http.post(
@@ -153,6 +180,33 @@ class AuthResponse {
       errorMessage: body['message'],
       validationErrors: body['errors'],
     );
+  }
+}
+```
+
+### Intégration transparente avec Firebase Auth
+
+Si votre application Flutter utilise Firebase Authentication (Email/Mot de passe, Google Sign-In, etc.), vous n'avez pas besoin de demander à vos utilisateurs de créer un second compte. Synchronisez automatiquement leur session dès la connexion Firebase :
+
+```dart
+import 'package:firebase_auth/firebase_auth.dart' as fb;
+
+class LoginController {
+  final AuthService _authService = AuthService();
+
+  Future<void> onFirebaseSignInSuccess(fb.User firebaseUser) async {
+    // Synchronise de manière transparente avec le serveur d'images
+    final authResult = await _authService.authenticateWithFirebase(
+      firebaseUid: firebaseUser.uid,
+      email: firebaseUser.email ?? '${firebaseUser.uid}@firebase.local',
+      name: firebaseUser.displayName,
+    );
+
+    if (authResult.success) {
+      print('Utilisateur synchronisé et token Sanctum enregistré avec succès !');
+    } else {
+      print('Erreur de synchronisation : ${authResult.errorMessage}');
+    }
   }
 }
 ```

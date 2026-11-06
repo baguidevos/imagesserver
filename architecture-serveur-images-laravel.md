@@ -450,6 +450,39 @@ class AuthController extends Controller
         return $this->tokenResponse($user);
     }
 
+    public function firebaseAuth(FirebaseAuthRequest $request): JsonResponse
+    {
+        $application = $request->attributes->get('application');
+        $firebaseUid = $request->validated('firebase_uid');
+        $email = mb_strtolower($request->validated('email'));
+        $displayName = $request->validated('name') ?: Str::before($email, '@');
+
+        $user = User::where('application_id', $application->id)
+            ->where(function ($query) use ($firebaseUid, $email) {
+                $query->where('firebase_uid', $firebaseUid)
+                    ->orWhere('email', $email);
+            })
+            ->first();
+
+        if (! $user) {
+            $createdUser = User::create([
+                'application_id' => $application->id,
+                'firebase_uid' => $firebaseUid,
+                'email' => $email,
+                'name' => $displayName,
+            ]);
+
+            return $this->tokenResponse($createdUser, 201);
+        }
+
+        $user->update([
+            'firebase_uid' => $firebaseUid,
+            'name' => $user->name ?: $displayName,
+        ]);
+
+        return $this->tokenResponse($user, 200);
+    }
+
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
@@ -645,7 +678,18 @@ Pour la connexion et l'inscription, envoyez seulement `X-Application-Key`. Envoy
 - Si possible, réencodez l'image avec Intervention Image pour retirer les métadonnées EXIF.
 - Faites des sauvegardes de la base et du disque de stockage.
 
-## 12. Vérification avant mise en production
+## 12. Exécution des migrations en production
+
+Si vous n'avez pas d'accès direct SSH sur votre serveur d'hébergement :
+
+1. **Via le tableau de bord Filament** : Rendez-vous sur `/admin`, un bouton *« Exécuter les migrations »* est disponible sur le Dashboard avec modale de confirmation.
+2. **Via lien direct authentifié** : Accédez à `/admin/migrate` lorsque vous êtes connecté comme administrateur.
+3. **Via webhook / token secret** : Définissez `MIGRATION_SECRET=votre_cle` dans votre `.env` et déclenchez l'exécution via :
+   ```bash
+   curl -X POST https://votre-serveur.com/admin/migrate?token=votre_cle -H "Accept: application/json"
+   ```
+
+## 13. Vérification avant mise en production
 
 ```bash
 php artisan route:list --path=v1

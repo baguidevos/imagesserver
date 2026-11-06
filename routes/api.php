@@ -10,6 +10,7 @@ Route::get('/v1/images/{image}', [ImageController::class, 'show'])->name('images
 Route::middleware(['application', 'throttle:auth'])->group(function () {
     Route::post('/v1/auth/register', [AuthController::class, 'register']);
     Route::post('/v1/auth/login', [AuthController::class, 'login']);
+    Route::post('/v1/auth/firebase', [AuthController::class, 'firebaseAuth'])->name('auth.firebase');
 });
 
 Route::middleware(['application', 'auth:sanctum', 'token.application', 'throttle:api'])->group(function () {

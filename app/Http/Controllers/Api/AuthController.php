@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\FirebaseAuthRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -43,6 +45,39 @@ class AuthController extends Controller
         }
 
         return $this->tokenResponse($user);
+    }
+
+    public function firebaseAuth(FirebaseAuthRequest $request): JsonResponse
+    {
+        $application = $request->attributes->get('application');
+        $firebaseUid = $request->validated('firebase_uid');
+        $email = mb_strtolower($request->validated('email'));
+        $displayName = $request->validated('name') ?: Str::before($email, '@');
+
+        $user = User::where('application_id', $application->id)
+            ->where(function ($query) use ($firebaseUid, $email) {
+                $query->where('firebase_uid', $firebaseUid)
+                    ->orWhere('email', $email);
+            })
+            ->first();
+
+        if (! $user) {
+            $createdUser = User::create([
+                'application_id' => $application->id,
+                'firebase_uid' => $firebaseUid,
+                'email' => $email,
+                'name' => $displayName,
+            ]);
+
+            return $this->tokenResponse($createdUser, 201);
+        }
+
+        $user->update([
+            'firebase_uid' => $firebaseUid,
+            'name' => $user->name ?: $displayName,
+        ]);
+
+        return $this->tokenResponse($user, 200);
     }
 
     public function logout(Request $request): JsonResponse
