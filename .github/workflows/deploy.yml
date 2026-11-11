@@ -13,14 +13,14 @@ jobs:
     steps:
       # 1. Récupérer le code avec historique
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
       # 2. Identifier les fichiers modifiés ET nouveaux
       - name: Détecter fichiers modifiés
         id: changed-files
-        uses: tj-actions/changed-files@v41
+        uses: tj-actions/changed-files@v47
         with:
           files: |
             app/**
@@ -47,7 +47,7 @@ jobs:
       # 4. Installer Node.js si package.json modifié
       - name: Setup Node.js
       #   if: contains(steps.changed-files.outputs.all_changed_files, 'package.json') || contains(steps.changed-files.outputs.all_changed_files, 'resources/')
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
 
@@ -71,7 +71,7 @@ jobs:
 
       # 8. Déployer UNIQUEMENT les fichiers modifiés
       - name: Deploy modified files via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.SERVER }}
           username: ${{ secrets.USERNAME }}
